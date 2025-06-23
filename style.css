@@ -1,9 +1,11 @@
+/* Global Reset */
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+/* Body Background */
 body {
   font-family: 'Segoe UI', sans-serif;
   background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
@@ -14,6 +16,7 @@ body {
   align-items: center;
 }
 
+/* Chat Container */
 .chat-container {
   width: 90%;
   max-width: 500px;
@@ -28,6 +31,7 @@ body {
   animation: fadeIn 1s ease-in-out;
 }
 
+/* Header */
 .header {
   text-align: center;
   font-size: 1.5rem;
@@ -37,21 +41,27 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Chat Area */
 .chat-box {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
+  scroll-behavior: smooth;
 }
 
+/* Message Bubbles */
 .message {
-  padding: 10px 15px;
+  padding: 12px 16px;
   border-radius: 12px;
   max-width: 80%;
-  line-height: 1.4;
+  line-height: 1.5;
+  font-size: 1rem;
+  position: relative;
   animation: slideUp 0.3s ease;
+  word-wrap: break-word;
 }
 
 .user {
@@ -64,29 +74,60 @@ body {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
+/* Message Actions (🔊 📋) */
+.message-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+.message-actions button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 16px;
+  color: #fff;
+  transition: background 0.3s ease;
+}
+
+.message-actions button:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* Input Area */
 .input-area {
   display: flex;
   padding: 15px;
   gap: 10px;
   background: rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .input-area input {
   flex: 1;
-  padding: 10px;
+  padding: 12px;
   border-radius: 10px;
   border: none;
   outline: none;
   font-size: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.input-area input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .input-area button {
-  padding: 10px 20px;
+  padding: 12px 20px;
   background-color: #00bcd4;
   border: none;
   border-radius: 10px;
   color: white;
   cursor: pointer;
+  font-size: 1rem;
   transition: background-color 0.3s ease;
 }
 
@@ -94,6 +135,16 @@ body {
   background-color: #0097a7;
 }
 
+/* Typing Indicator */
+.typing-indicator {
+  font-style: italic;
+  font-size: 0.9rem;
+  color: #ccc;
+  padding: 8px 10px;
+  animation: pulse 1.5s infinite;
+}
+
+/* Animations */
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -113,5 +164,34 @@ body {
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0% { opacity: 0.2; }
+  50% { opacity: 1; }
+  100% { opacity: 0.2; }
+}
+
+/* Responsive Design */
+@media screen and (max-width: 600px) {
+  .chat-container {
+    width: 100%;
+    height: 100vh;
+    border-radius: 0;
+  }
+
+  .header {
+    font-size: 1.2rem;
+    padding: 16px;
+  }
+
+  .input-area input,
+  .input-area button {
+    font-size: 0.95rem;
+  }
+
+  .message {
+    font-size: 0.95rem;
   }
 }
