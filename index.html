@@ -8,15 +8,25 @@
 </head>
 <body>
   <div class="chat-container">
+    
+    <!-- Header -->
     <div class="header">Nebula - AI Assistant</div>
-    <div id="chat-box" class="chat-box"></div>
-    <div id="typing-indicator">Nebula is typing...</div>
+    
+    <!-- Chat Messages -->
+    <div id="chat-box" class="chat-box">
+      <!-- Typing indicator -->
+      <div id="typing-indicator" class="typing-indicator" style="display: none;">🪐 Nebula is typing...</div>
+    </div>
+    
+    <!-- Input Area -->
     <div class="input-area">
       <input type="text" id="user-input" placeholder="Ask me anything..." />
       <button onclick="sendMessage()">Send</button>
     </div>
+    
   </div>
 
+  <!-- JavaScript -->
   <script src="script.js"></script>
 </body>
 </html>
