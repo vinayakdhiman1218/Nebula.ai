@@ -1,28 +1,48 @@
 const chatBox = document.getElementById('chat-box');
 const inputField = document.getElementById('user-input');
 const typingIndicator = document.getElementById('typing-indicator');
-const GEMINI_API_KEY = "AIzaSyDNkXTP69Ik0fhw4UrhARu-sPgeTNhdYso";  // Replace with your actual Gemini API key
 
-// ➤ Send message
+const GEMINI_API_KEY = "AIzaSyDNkXTP69Ik0fhw4UrhARu-sPgeTNhdYso"; // Replace with your Gemini API key
+
+let chatHistory = JSON.parse(sessionStorage.getItem("chatHistory")) || [];
+
+// ✅ Load chat on page load
+window.addEventListener("load", () => {
+  chatHistory.forEach(msg => addMessage(msg.text, msg.sender, false));
+});
+
+// ✅ Save to session
+function saveToSession() {
+  sessionStorage.setItem("chatHistory", JSON.stringify(chatHistory));
+}
+
+// ✅ Send message
 function sendMessage() {
   const userMessage = inputField.value.trim();
   if (!userMessage) return;
 
   addMessage(userMessage, 'user');
+  chatHistory.push({ role: 'user', text: userMessage });
+  saveToSession();
   inputField.value = '';
   showTyping(true);
 
-  getGeminiResponse(userMessage).then(botReply => {
+  getGeminiResponse().then(botReply => {
     showTyping(false);
     addMessage(botReply, 'bot');
+    chatHistory.push({ role: 'model', text: botReply });
+    saveToSession();
   });
 }
 
-// ➤ Add message
-function addMessage(message, sender) {
-  const msg = document.createElement('div');
-  msg.className = `message ${sender}`;
-  msg.innerText = message;
+// ✅ Add message to UI
+function addMessage(message, sender, save = true) {
+  const msgElement = document.createElement('div');
+  msgElement.classList.add('message', sender);
+
+  const messageText = document.createElement('span');
+  messageText.textContent = message;
+  msgElement.appendChild(messageText);
 
   if (sender === 'bot') {
     const actions = document.createElement('div');
@@ -30,101 +50,93 @@ function addMessage(message, sender) {
 
     const speakBtn = document.createElement('button');
     speakBtn.textContent = '🔊';
+    speakBtn.title = 'Speak';
     speakBtn.onclick = () => speak(message);
     actions.appendChild(speakBtn);
 
     const copyBtn = document.createElement('button');
     copyBtn.textContent = '📋';
-    copyBtn.onclick = () => copyText(message);
+    copyBtn.title = 'Copy';
+    copyBtn.onclick = () => copyToClipboard(message);
     actions.appendChild(copyBtn);
 
-    msg.appendChild(actions);
+    msgElement.appendChild(actions);
   }
 
-  chatBox.insertBefore(msg, typingIndicator);
+  chatBox.appendChild(msgElement);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// ➤ Typing Indicator
+// ✅ Typing indicator
 function showTyping(show) {
   typingIndicator.style.display = show ? 'block' : 'none';
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// ➤ Voice Speak
-function speak(text) {
-  if ('speechSynthesis' in window) {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-IN';
-    speechSynthesis.speak(utterance);
-  }
-}
-
-// ➤ Copy Text
-function copyText(text) {
-  navigator.clipboard.writeText(text)
-    .then(() => alert('✅ Copied!'))
-    .catch(() => alert('❌ Copy failed!'));
-}
-
-// ➤ Gemini API Call
-async function getGeminiResponse(userText) {
-  const prompt = `
-You are Nebula, an AI assistant created by Vinayak Dhiman.
-When asked your name, say "My name is Nebula".
-When asked who created you, say "I was created by Vinayak Dhiman".
-For all other queries, reply helpfully.
-
-User: ${userText}
-`;
+// ✅ Gemini API with Full Chat History Context
+async function getGeminiResponse() {
+  const formattedHistory = chatHistory.map(entry => ({
+    role: entry.role,
+    parts: [{ text: entry.text }]
+  }));
 
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
-    });
-    const data = await res.json();
-    console.log(data);
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: formattedHistory }),
+      }
+    );
 
-    if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+    const data = await response.json();
+    console.log("Gemini API response:", data);
+
+    if (
+      data &&
+      data.candidates &&
+      data.candidates[0]?.content?.parts?.[0]?.text
+    ) {
       return data.candidates[0].content.parts[0].text;
     } else {
-      return "⚠️ Gemini API didn't return a valid response.";
+      return "⚠️ Gemini didn't return a valid response.";
     }
   } catch (err) {
-    console.error("API Error:", err);
-    return "❌ Error connecting to Gemini API.";
+    console.error("Gemini API Error:", err);
+    return "❌ Could not connect to Gemini API.";
   }
 }
 
-// ➤ Voice Input (Speech-to-Text)
-function startVoiceInput() {
-  if (!('webkitSpeechRecognition' in window)) {
-    alert("❌ Speech recognition not supported in this browser.");
-    return;
+// ✅ Voice Output
+function speak(text) {
+  if ('speechSynthesis' in window) {
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'en-IN';
+    speechSynthesis.speak(utter);
+  } else {
+    alert("❌ Your browser doesn't support text-to-speech.");
   }
-
-  const recognition = new webkitSpeechRecognition();
-  recognition.lang = 'en-IN';
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
-
-  recognition.start();
-
-  recognition.onresult = (event) => {
-    inputField.value = event.results[0][0].transcript;
-    sendMessage();
-  };
-
-  recognition.onerror = (e) => {
-    alert('❌ Voice input error: ' + e.error);
-  };
 }
 
-// ➤ Send on Enter key
-inputField.addEventListener('keypress', e => {
-  if (e.key === 'Enter') sendMessage();
+// ✅ Copy to clipboard
+function copyToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => alert("✅ Copied!"));
+  } else {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+    alert("✅ Copied!");
+  }
+}
+
+// ✅ Enter key to send
+inputField.addEventListener("keypress", function (e) {
+  if (e.key === "Enter") sendMessage();
 });
