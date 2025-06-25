@@ -2,21 +2,23 @@ const chatBox = document.getElementById('chat-box');
 const inputField = document.getElementById('user-input');
 const typingIndicator = document.getElementById('typing-indicator');
 
-const GEMINI_API_KEY = "AIzaSyDNkXTP69Ik0fhw4UrhARu-sPgeTNhdYso"; // Replace with your Gemini API key
+const GEMINI_API_KEY = "AIzaSyDNkXTP69Ik0fhw4UrhARu-sPgeTNhdYso"; // Replace with your API Key
 
 let chatHistory = JSON.parse(sessionStorage.getItem("chatHistory")) || [];
+let speakingUtterance = null;
+let currentlySpeakingBtn = null;
 
-// ✅ Load chat on page load
+// Load previous session
 window.addEventListener("load", () => {
   chatHistory.forEach(msg => addMessage(msg.text, msg.sender, false));
 });
 
-// ✅ Save to session
+// Save session
 function saveToSession() {
   sessionStorage.setItem("chatHistory", JSON.stringify(chatHistory));
 }
 
-// ✅ Send message
+// Send Message
 function sendMessage() {
   const userMessage = inputField.value.trim();
   if (!userMessage) return;
@@ -35,7 +37,7 @@ function sendMessage() {
   });
 }
 
-// ✅ Add message to UI
+// Add message to chat
 function addMessage(message, sender, save = true) {
   const msgElement = document.createElement('div');
   msgElement.classList.add('message', sender);
@@ -48,12 +50,14 @@ function addMessage(message, sender, save = true) {
     const actions = document.createElement('div');
     actions.className = 'message-actions';
 
+    // Voice Button
     const speakBtn = document.createElement('button');
     speakBtn.textContent = '🔊';
     speakBtn.title = 'Speak';
-    speakBtn.onclick = () => speak(message);
+    speakBtn.onclick = () => toggleSpeak(message, speakBtn);
     actions.appendChild(speakBtn);
 
+    // Copy Button
     const copyBtn = document.createElement('button');
     copyBtn.textContent = '📋';
     copyBtn.title = 'Copy';
@@ -65,15 +69,17 @@ function addMessage(message, sender, save = true) {
 
   chatBox.appendChild(msgElement);
   chatBox.scrollTop = chatBox.scrollHeight;
+
+  if (save) saveToSession();
 }
 
-// ✅ Typing indicator
+// Typing indicator
 function showTyping(show) {
   typingIndicator.style.display = show ? 'block' : 'none';
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// ✅ Gemini API with Full Chat History Context
+// Gemini API with context
 async function getGeminiResponse() {
   const formattedHistory = chatHistory.map(entry => ({
     role: entry.role,
@@ -91,7 +97,7 @@ async function getGeminiResponse() {
     );
 
     const data = await response.json();
-    console.log("Gemini API response:", data);
+    console.log("Gemini API:", data);
 
     if (
       data &&
@@ -108,18 +114,36 @@ async function getGeminiResponse() {
   }
 }
 
-// ✅ Voice Output
-function speak(text) {
-  if ('speechSynthesis' in window) {
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = 'en-IN';
-    speechSynthesis.speak(utter);
-  } else {
-    alert("❌ Your browser doesn't support text-to-speech.");
+// Toggle Speak / Stop
+function toggleSpeak(text, button) {
+  if (speechSynthesis.speaking && currentlySpeakingBtn === button) {
+    speechSynthesis.cancel();
+    button.textContent = '🔊';
+    currentlySpeakingBtn = null;
+    return;
   }
+
+  const cleanText = text.replace(/[^a-zA-Z0-9\s.,?!]/g, ' '); // Remove annoying symbols like *
+
+  const utter = new SpeechSynthesisUtterance(cleanText);
+  utter.lang = 'en-IN';
+  utter.rate = 1;
+  utter.pitch = 1;
+
+  utter.onstart = () => {
+    button.textContent = '⏸️';
+    currentlySpeakingBtn = button;
+  };
+
+  utter.onend = () => {
+    button.textContent = '🔊';
+    currentlySpeakingBtn = null;
+  };
+
+  speechSynthesis.speak(utter);
 }
 
-// ✅ Copy to clipboard
+// Copy to Clipboard
 function copyToClipboard(text) {
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text).then(() => alert("✅ Copied!"));
@@ -136,7 +160,7 @@ function copyToClipboard(text) {
   }
 }
 
-// ✅ Enter key to send
+// Enter key to send
 inputField.addEventListener("keypress", function (e) {
   if (e.key === "Enter") sendMessage();
 });
